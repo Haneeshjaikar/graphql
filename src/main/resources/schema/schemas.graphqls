@@ -1,0 +1,67 @@
+type Query {
+    profile(profileId: String!): Profile
+}
+
+type Profile @key(fields: "id") {
+    id: String!
+    firstName: String
+    lastName: String
+    dateOfBirth: String
+    gender: Gender
+    maritalStatus: MaritalStatus
+    preferredCommunicationChannel: CommunicationChannel
+    address: Address
+}
+
+type Address {
+    addressLineOne: String
+    street: String
+    city: String
+    postcode: String
+    country: String
+}
+
+enum Gender {
+  "Male"
+  Male
+  "Female"
+  Female
+  "Prefer not to say"
+  PreferNotToSay
+}
+
+enum MaritalStatus {
+    Single
+    Married
+    Divorced
+}
+
+enum CommunicationChannel {
+    Email
+    Phone
+    SMS
+    Post
+}
+
+input ProfileInput{
+    firstName: String
+    lastName: String
+    dateOfBirth: String
+    gender: Gender
+    maritalStatus: MaritalStatus
+    preferredCommunicationChannel: CommunicationChannel
+    address: AddressInput
+}
+
+input AddressInput {
+    addressLineOne: String
+    street: String
+    city: String
+    postcode: String
+    country: String
+}
+
+type Mutation {
+    updateProfile(profileId: String!, profileInput: ProfileInput!): Profile
+    createProfile(profileInput: ProfileInput!): Profile
+}

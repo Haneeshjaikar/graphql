@@ -1,0 +1,71 @@
+server:
+  port: 9090
+deployment:
+  env: dev
+spring:
+  application:
+    name: app-graph-service
+    open-api-title: null
+    description: null
+    version: 1.0.0
+  profiles:
+    active: ${DEPLOY_ENV:local}
+enable:
+  bff:
+    advanced:
+      instrumentation: true
+traceIdHeaderName: traceid,traceparent
+management:
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0
+    baggage:
+      remote-fields:
+      - x-session-id
+      correlation:
+        fields:
+        - x-session-id
+      propagation:
+        type: w3c
+  server:
+    port: 4007
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  endpoint:
+    prometheus:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include:
+        - health
+        - info
+        - prometheus
+        - circuitbreakerevents
+      base-path: /
+      path-mapping:
+        prometheus: /metrics
+data:
+  api:
+    get-profile: http://localhost:9080/api/v1/profiles
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.apache.kafka.clients.Metadata: WARN
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+deployment:
+  env: prod
+logging:
+  level:
+    root: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.apache.kafka.clients.Metadata: WARN

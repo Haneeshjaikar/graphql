@@ -1,0 +1,181 @@
+group = 'com.demo'
+sourceCompatibility = '17'
+
+ext {
+	set('springCloudVersion', '2022.0.0')
+	set('tomcat.version', "10.1.4")
+}
+
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+	componentTestCompile.extendsFrom testCompile
+	componentTestRuntime.extendsFrom testRuntime
+}
+
+
+
+repositories {
+	mavenCentral()
+	mavenLocal()
+	maven {
+		url "https://gitlab.com/api/v4/groups/53328976/-/packages/maven"
+		name "GitLab"
+		credentials(HttpHeaderCredentials) {
+			name = "Private-Token"
+			value = System.getenv("PersonalToken")
+		}
+		authentication {
+			header(HttpHeaderAuthentication)
+		}
+	}
+}
+
+pitest {
+	targetClasses = ["${project.group}.*"]
+	threads = (Runtime.getRuntime().availableProcessors() * 0.5).intValue()
+	outputFormats = ['XML', 'HTML']
+	timestampedReports = false
+	testSourceSets = [sourceSets.test]
+	mainSourceSets = [sourceSets.main]
+	junit5PluginVersion = '1.0.0'
+	useClasspathFile = true
+	enableDefaultIncrementalAnalysis = true
+	mutationThreshold.set(Integer.valueOf(System.getenv("MINIMUM_MUTATION_THRESHOLD")))
+	coverageThreshold.set(Integer.valueOf(System.getenv("MINIMUM_MUTATION_COVERAGE_THRESHOLD")))
+}
+
+checkstyle {
+	toolVersion = '10.0'
+	configFile = file('base-gradle/google_checks.xml')
+	reportsDir = file("$project.buildDir/reports/checkstyle/")
+	checkstyleTest.enabled = false
+}
+
+tasks.withType(Checkstyle) {
+	reports {
+		xml.required = true
+		html.required = true
+	}
+	maxErrors = 0
+	maxWarnings = 0
+}
+
+test {
+	useJUnitPlatform()
+	finalizedBy jacocoTestReport
+}
+jacocoTestReport {
+	dependsOn test
+	executionData(file("${project.buildDir}/jacoco/test.exec"))
+	reports {
+		xml.required = true
+		xml.destination(file("${project.buildDir}/reports/jacoco/xml/unitTest/jacocoUnitTestReport.xml"))
+		html.destination file("${project.buildDir}/reports/jacoco/html/unitTest")
+		afterEvaluate {
+			classDirectories.setFrom(files(classDirectories.files.collect {
+				fileTree(dir: it, exclude: excludeFilesFromTests)
+			}))
+		}
+	}
+}
+jacocoTestCoverageVerification {
+	dependsOn jacocoTestReport
+	executionData(file("${project.buildDir}/jacoco/test.exec"))
+	classDirectories.from = sourceSets.main.output
+	violationRules {
+		rule {
+			limit {
+				counter = 'INSTRUCTION'
+				minimum = new BigDecimal(System.getenv("MINIMUM_UNIT_TESTS_INSTRUCTION_COVERAGE"))
+			}
+			afterEvaluate {
+				classDirectories.setFrom(files(classDirectories.files.collect {
+					fileTree(dir: it, exclude: excludeFilesFromTests)
+				}))
+			}
+		}
+	}
+}
+check.dependsOn jacocoTestCoverageVerification
+
+ext {
+	[ // Groovy map literal
+	  libraries = [
+			  spring_boot_starter_web: 'org.springframework.boot:spring-boot-starter-web',
+			  spring_boot_dev_tools  : 'org.springframework.boot:spring-boot-devtools',
+			  jetbrains_annotations  : 'org.jetbrains:annotations:20.1.0',
+			  lombok                 : 'org.projectlombok:lombok:1.18.24',
+			  spring_boot_validations: "org.springframework.boot:spring-boot-starter-validation",
+			  flogger_slf4j          : 'com.google.flogger:flogger-slf4j-backend:0.7.4',
+			  mapstruct              : "org.mapstruct:mapstruct:1.4.2.Final",
+			  mapstruct_processor    : "org.mapstruct:mapstruct-processor:1.4.2.Final",
+			  reactor_core			 : 'io.projectreactor:reactor-core:3.4.18',
+			  spring_boot_data_jpa   : 'org.springframework.boot:spring-boot-starter-data-jpa',
+			  openapi                : 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.2',
+			  azure_core             : 'com.azure:azure-core:1.34.0',
+			  azure_kv               : 'com.microsoft.azure:azure-keyvault-secrets-spring-boot-starter:2.3.5',
+			  jackson_annotations    : 'com.fasterxml.jackson.module:jackson-module-jakarta-xmlbind-annotations:2.13.3',
+			  jayway                 : 'com.jayway.jsonpath:json-path:2.7.0',
+			  guava                  : 'com.google.guava:guava:31.1-jre',
+			  micrometer_prometheus  : 'io.micrometer:micrometer-registry-prometheus:1.9.0',
+			  netty_dns_macos        : "io.netty:netty-resolver-dns-native-macos:4.1.72.Final:osx-aarch_64",
+			  netflix_graphql_dgs    : "com.netflix.graphql.dgs:graphql-dgs-spring-boot-starter",
+			  apache_commons         : 'org.apache.commons:commons-lang3:3.12.0'
+	  ],
+	  customLibraries = [
+			  webclient: 'com.demo.common:webclient:0.0.1',
+			  util     : 'com.demo.common:util:0.0.1',
+			  logging  : 'com.demo.common:logging:0.0.1',
+			  bff      : 'com.demo.common:bff:0.0.1',
+			  events   : 'com.demo.common:events:0.0.1'
+	  ],
+	  testLibraries = [
+			  spring_boot_test          : 'org.springframework.boot:spring-boot-starter-test',
+			  mocksever_netty           : 'org.mock-server:mockserver-netty:5.13.2',
+			  mockserver_spring_listener: 'org.mock-server:mockserver-spring-test-listener:5.13.2',
+			  hamcrest_core             : 'org.hamcrest:hamcrest-core:2.2',
+			  hamcrest_library          : 'org.hamcrest:hamcrest-library:2.2',
+			  mockito_core              : 'org.mockito:mockito-core:3.11.2',
+			  pactConsumerJunit         : 'au.com.dius.pact.consumer:junit5:4.1.7',
+			  pactConsumerJava8         : 'au.com.dius.pact.consumer:java8:4.1.7',
+			  junitJupiter              : 'org.junit.jupiter:junit-jupiter-api:5.9.0',
+			  junitJupiterEngine        : 'org.junit.jupiter:junit-jupiter-engine:5.9.0',
+			  pactProvider              : 'au.com.dius.pact.provider:junit5spring:4.3.4',
+			  freeport					: 'me.alexpanov:free-port-finder:1.0',
+			  spring_kafka_test         : 'org.springframework.kafka:spring-kafka-test',
+			  jupiter_api               : 'org.junit.jupiter:junit-jupiter-api:5.9.0',
+			  jupiter_engine            : 'org.junit.jupiter:junit-jupiter-engine:5.9.0',
+			  junit_patform             : 'org.junit.platform:junit-platform-launcher:1.9.2'
+
+	  ]
+	]
+}
+
+jib {
+	to {
+		tags = ['latest', project.version]
+	}
+	container {
+		jvmFlags = ['-Xms1024m', '-Xmx2048m']
+		creationTime="USE_CURRENT_TIMESTAMP"
+	}
+	allowInsecureRegistries = false
+}
+
+build.dependsOn 'pitest'
+
+configurations.implementation {
+	exclude group: 'io.zipkin.reporter2'
+}
+
+
+
+jar { enabled = false }
+
+bootJar {
+	enabled = false
+}
+
